@@ -1,0 +1,16 @@
+*.pyc
+testdata/*
+
+results/*
+logs/*
+weights/*
+
+*.jpg
+
+*.pdf
+.ipynb_checkpoints/*
+flagged/*
+restored_output/*
+testdata/RealSet65
+testdata/RealSR
+testdata/RealSet128
