@@ -1120,7 +1120,7 @@ class TrainerDistillDifIR(TrainerDifIR):
                         )  # (-1,1) 
             
 
-            batch = self.prepared_mica_batch(pred_image, temp_data)
+            batch = self.prepared_mica_batch(self, pred_image, temp_data)
             
 
             if self.configs.train.use_fp16:
@@ -1237,7 +1237,7 @@ class TrainerDistillDifIR(TrainerDifIR):
                 
                     # Save 3d mica obj
 
-                    self.visualize_mica(opdict, self.image_dir / phase)
+                    self.visualize_mica(self, opdict, self.image_dir / phase)
 
                 self.log_step_img[phase] += 1
 
@@ -1266,11 +1266,11 @@ class TrainerDistillDifIR(TrainerDifIR):
                 # data = self.prepare_data(data, phase='val')
                 if 'gt' in data:
                     # im_lq, im_gt = data['lq'], data['gt']
-                    im_lq = data['lq'].reshape(-1, *data['lq'].shape[2:]),  # (b*2, 3, 64, 64)
+                    im_lq = data['lq'].reshape(-1, *data['lq'].shape[2:])  # (b*2, 3, 64, 64)
                     im_gt = data['gt'].reshape(-1, *data['gt'].shape[2:])   # (b*2, 3, 64, 64)
                 else:
                     # im_lq = data['lq']
-                    im_lq = data['lq'].reshape(-1, *data['lq'].shape[2:]),  # (b*2, 3, 64, 64)
+                    im_lq = data['lq'].reshape(-1, *data['lq'].shape[2:])  # (b*2, 3, 64, 64)
 
                 model_kwargs={'lq':im_lq,} if self.configs.model.params.cond_lq else None
                 
@@ -1286,7 +1286,7 @@ class TrainerDistillDifIR(TrainerDifIR):
                     one_step=True
                     )
                 
-                batch = self.prepared_mica_batch(self, results, data)
+                batch = self.prepared_mica_batch(results, data)
             
                 with torch.no_grad():
                     input_mica, opdict, encoder_output, decoder_output = self.mica_model.training_MICA(batch)
@@ -1312,7 +1312,7 @@ class TrainerDistillDifIR(TrainerDifIR):
                                self.image_dir / phase / f"predict_x_{self.log_step_img[phase]:05d}.png",
                                )
                         
-                        self.visualize_mica(opdict, self.image_dir / phase)
+                        self.visualize_mica(self, opdict, self.image_dir / phase)
                     
                     x3 = vutils.make_grid(im_lq, normalize=True)
                     # self.writer.add_image('Validation LQ Image', x3, self.log_step_img[phase])
@@ -1451,6 +1451,9 @@ class TrainerFaceRecon(TrainerDistillDifIR):  # Or TrainerDifIR if you're using 
         visdict = {
             'input_images': opdict['images'],
         }
+        # add images to tensorboard
+        for k, v in visdict.items():
+            self.logger.add_images(k, np.clip(v.detach().cpu(), 0.0, 1.0), self.current_iters)
 
         pred_canonical_shape_vertices = torch.empty(0, 3, 512, 512).cuda()
         flame_verts_shape = torch.empty(0, 3, 512, 512).cuda()
