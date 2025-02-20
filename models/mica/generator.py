@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as Functional
 
-from model.mica.flame import FLAME
+from models.mica.flame import FLAME
 
 
 def kaiming_leaky_init(m):
@@ -70,14 +70,8 @@ class Generator(nn.Module):
         if self.regress:
             self.regressor = MappingNetwork(z_dim, map_hidden_dim, map_output_dim, hidden)
         self.generator = FLAME(model_cfg)
-        if len(self.device) > 1:
-            self.regressor = torch.nn.DataParallel(self.regressor, device_ids=self.device)
-            self.generator = torch.nn.DataParallel(self.generator, device_ids=self.device)
-            self.regressor = self.regressor.module
-            self.generator = self.generator.module
-        else:
-            self.regressor = MappingNetwork(z_dim, map_hidden_dim, map_output_dim, hidden).to(self.device[0])
-            self.generator = FLAME(model_cfg).to(self.device[0])
+        self.regressor = MappingNetwork(z_dim, map_hidden_dim, map_output_dim, hidden).to(self.device)
+        self.generator = FLAME(model_cfg).to(self.device)
             
 
     def forward(self, arcface):

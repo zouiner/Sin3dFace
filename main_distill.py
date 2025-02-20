@@ -1,6 +1,6 @@
 import argparse
 from omegaconf import OmegaConf
-from trainer import TrainerDistillDifIR as TrainerDistill
+from trainer import TrainerDistillDifIR as TrainerDistill, TrainerFaceRecon
 
 
 def get_parser(**parser_kwargs):
@@ -41,12 +41,15 @@ if __name__ == "__main__":
     configs = OmegaConf.load(args.cfg_path)
     configs.diffusion.params.steps = args.steps
 
+    #!!! fix for mica
+    configs.MICA.output_dir = args.save_dir
+
     # merge args to config
     for key in vars(args):
         if key in ['cfg_path', 'save_dir', 'resume', ]:
             configs[key] = getattr(args, key)
 
-    trainer = TrainerDistill(configs)
+    trainer = TrainerFaceRecon(configs) # TrainerDistill
     trainer.train()
 
 # export OMP_NUM_THREADS=1

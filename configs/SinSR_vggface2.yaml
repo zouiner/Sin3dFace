@@ -1,7 +1,7 @@
 model:
-  target: models.unet.UNetModelSwin
+  target: models.SinSR.unet.UNetModelSwin
   ckpt_path: ~
-  teacher_ckpt_path: weights/resshift_realsrx4_s15_v1.pth
+  teacher_ckpt_path: data/weights/resshift_realsrx4_s15_v1.pth
   params:
     image_size: 64
     in_channels: 6
@@ -24,7 +24,7 @@ model:
     mlp_ratio: 4
 
 diffusion:
-  target: models.script_util.create_gaussian_diffusion
+  target: models.SinSR.script_util.create_gaussian_diffusion
   params:
     sf: 4
     schedule_name: exponential
@@ -43,7 +43,7 @@ diffusion:
 
 autoencoder:
   target: ldm.models.autoencoder.VQModelTorch
-  ckpt_path: weights/autoencoder_vq_f4.pth
+  ckpt_path: data/weights/autoencoder_vq_f4.pth
   use_fp16: True
   params:
     embed_dim: 3
@@ -161,6 +161,68 @@ train:
   log_freq: [200, 5000, 1] #[training loss, training images, val images]
   save_images: True  # save the images of tensorboard logging
   use_ema_val: True
+
+MICA:
+  target: models.mica.mica
+  ckpt_path: ""
+
+  model:
+    name: 'mica'
+    testing: False
+    topology_path: "data/FLAME2020/head_template.obj"
+    flame_model_path: "data/FLAME2020/generic_model.pkl"
+    flame_lmk_embedding_path: "data/FLAME2020/landmark_embedding.npy"
+    n_shape: 300
+    n_pose: 6
+    n_exp: 50
+    layers: 8
+    hidden_layers_size: 256
+    mapping_layers: 3
+    use_pretrained: False
+    arcface_pretrained_model: "data/pretrained/backbone.pth"
+
+  # Dataset options
+  dataset:
+    root: 'datasets/arcface'
+    training_data: ['LYHM']
+    eval_data: ['LYHM']
+    batch_size: 8
+    num_workers: 4
+    K: 2
+
+  # Mask weights
+  mask_weights:
+    face: 150.0
+    nose: 50.0
+    lips: 50.0
+    forehead: 50.0
+    lr_eye_region: 50.0
+    eye_region: 50.0
+    whole: 1.0
+    ears: 0.01
+    eyes: 0.01
+
+  running_average: 7
+
+  # Training options
+  train:
+    lr: 1e-5
+    arcface_lr: 1e-5
+    weight_decay: 2e-4
+    use_mask: True
+    reset_optimizer: False
+    max_steps: 1600000
+    max_epochs: 50
+    log_steps: 50
+    val_steps: 300
+    vis_steps: 1200
+    val_save_img: 1200
+    checkpoint_steps: 1000
+    checkpoint_epochs_steps: 10000
+    log_dir: 'logs'
+    vis_dir: 'train_images'
+    val_vis_dir: 'val_images'
+    write_summary: True
 
 # export OMP_NUM_THREADS=1
 # python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/SinSR_vggface2.yaml --save_dir logs/SinSR

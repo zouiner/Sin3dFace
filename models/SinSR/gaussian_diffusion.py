@@ -811,13 +811,13 @@ class GaussianDiffusion:
             else:
                 raise NotImplementedError(self.loss_type)
             if self.model_mean_type == ModelMeanType.START_X:      # predict x_0
-                pred_zstart = model_output.detach()
+                pred_zstart = model_output.detach().requires_grad_(True)
             elif self.model_mean_type == ModelMeanType.EPSILON:
-                pred_zstart = self._predict_xstart_from_eps(x_t=z_t, y=z_y, t=t, eps=model_output.detach())
+                pred_zstart = self._predict_xstart_from_eps(x_t=z_t, y=z_y, t=t, eps=model_output.detach().requires_grad_(True))
             elif self.model_mean_type == ModelMeanType.RESIDUAL:
-                pred_zstart = self._predict_xstart_from_residual(y=z_y, residual=model_output.detach())
+                pred_zstart = self._predict_xstart_from_residual(y=z_y, residual=model_output.detach().requires_grad_(True))
             elif self.model_mean_type == ModelMeanType.EPSILON_SCALE:
-                pred_zstart = self._predict_xstart_from_eps_scale(x_t=z_t, y=z_y, t=t, eps=model_output.detach())
+                pred_zstart = self._predict_xstart_from_eps_scale(x_t=z_t, y=z_y, t=t, eps=model_output.detach().requires_grad_(True))
             else:
                 raise NotImplementedError(self.model_mean_type)     
                
