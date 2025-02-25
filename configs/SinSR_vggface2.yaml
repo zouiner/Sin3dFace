@@ -1,6 +1,6 @@
 model:
   target: models.SinSR.unet.UNetModelSwin
-  ckpt_path: ~
+  ckpt_path: /users/ps1510/scratch/Programs/Sin3dFace/data/weights/SinSR_v2.pth
   teacher_ckpt_path: data/weights/resshift_realsrx4_s15_v1.pth
   params:
     image_size: 64
@@ -26,7 +26,7 @@ model:
 diffusion:
   target: models.SinSR.script_util.create_gaussian_diffusion
   params:
-    sf: 4
+    sf: 4 # scale factor 
     schedule_name: exponential
     schedule_kwargs:
       power: 0.3
@@ -92,12 +92,10 @@ degradation:
 
 data:
   train:
-    type: realesrgan
+    type: 3dSin
     params:
-      dir_paths: []
-      txt_file_path: [
-                      'traindata/image_paths.txt', 
-                     ] 
+      dir_path: datasets/arcface/LYHM/images
+      dir_path_extra: ~
       im_exts: ['JPEG', 'png', 'jpg']
       io_backend:
         type: disk
@@ -143,9 +141,9 @@ train:
   # xT_cov_loss: 0.1
 
   lr: 5e-5
-  batch: [48, 4]   # batchsize for training and validation
+  batch: [24, 2]   # batchsize for training and validation // val size will be K*batch[1] 
   use_fp16: False
-  microbatch: 12 # 16
+  microbatch: 6 # 16 # should be divided by K(2) in MICA # total_b = int(micro_b/K)*num_acc*GPUs
   seed: 123456
   global_seeding: False
   prefetch_factor:  4
@@ -154,16 +152,18 @@ train:
   iterations: 500000
   milestones: [5000, 500000]
   weight_decay: 0
-  save_freq: 1000
+  save_freq: 5000
   # val_freq:  10000
   # log_freq: [1000, 5000, 1] #[training loss, training images, val images]
-  val_freq:  1000
-  log_freq: [200, 5000, 1] #[training loss, training images, val images]
+  val_freq:  2000
+  log_freq: [1000, 2000, 10] #[training loss, training images, val images]
   save_images: True  # save the images of tensorboard logging
   use_ema_val: True
+  train_size: 0.9 # val size = train_size - 0.2
+
 
 MICA:
-  target: models.mica.mica
+  target: models.mica.mica.MICA
   ckpt_path: ""
 
   model:

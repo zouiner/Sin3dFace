@@ -48,18 +48,19 @@ class MICA(BaseModel):
         self.flameModel = Generator(512, 300, self.cfg.model.n_shape, mapping_layers, model_cfg, self.device)
 
     def load_model(self):
-        model_path = os.path.join(self.cfg.output_dir, 'model_mica.tar')
-        if os.path.exists(self.cfg.ckpt_path) and self.cfg.model.use_pretrained:
-            model_path = self.cfg.ckpt_path
-        if os.path.exists(model_path):
-            logger.info(f'[{self.tag}] Trained model found. Path: {model_path} | GPU: {self.device}')
-            checkpoint = torch.load(model_path)
-            if 'arcface' in checkpoint:
-                self.arcface.load_state_dict(checkpoint['arcface'])
-            if 'flameModel' in checkpoint:
-                self.flameModel.load_state_dict(checkpoint['flameModel'])
-        else:
-            logger.info(f'[{self.tag}] Checkpoint not available starting from scratch!')
+        # model_path = os.path.join(self.cfg.output_dir, 'model_mica.tar')
+        # if os.path.exists(self.cfg.ckpt_path) and self.cfg.model.use_pretrained:
+        #     model_path = self.cfg.ckpt_path
+        # if os.path.exists(model_path):
+        #     logger.info(f'[{self.tag}] Trained model found. Path: {model_path} | GPU: {self.device}')
+        #     checkpoint = torch.load(model_path)
+        #     if 'arcface' in checkpoint:
+        #         self.arcface.load_state_dict(checkpoint['arcface'])
+        #     if 'flameModel' in checkpoint:
+        #         self.flameModel.load_state_dict(checkpoint['flameModel'])
+        # else:
+        #     logger.info(f'[{self.tag}] Checkpoint not available starting from scratch!')
+        pass
 
     def model_dict(self):
         return {
@@ -145,7 +146,13 @@ class MICA(BaseModel):
     
     def tensor2tensor_img(self, tensor, min_max=(-1, 1), size = False):
         if size:
-            tensor = F.interpolate(tensor.unsqueeze(0), size=(size, size), mode='bilinear', align_corners=False)
+            if tensor.ndim == 3:  # (C, H, W)
+                tensor = F.interpolate(tensor.unsqueeze(0), size=(size, size), mode='bilinear', align_corners=False)
+                tensor = tensor.squeeze(0)  # Back to (C, H, W)
+
+            elif tensor.ndim == 4:  # (N, C, H, W)
+                tensor = F.interpolate(tensor, size=(size, size), mode='bilinear', align_corners=False)
+
         tensor = tensor.float().cpu().clamp_(*min_max)  # clamp
         tensor = (tensor - min_max[0]) / \
             (min_max[1] - min_max[0])  # to range [0,1]

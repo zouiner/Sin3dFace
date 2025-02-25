@@ -1,5 +1,6 @@
 *.pyc
 testdata/*
+test_code/
 
 results/*
 logs/*

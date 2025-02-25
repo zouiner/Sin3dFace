@@ -1,0 +1,174 @@
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=VGG16_Weights.IMAGENET1K_V1`. You can also use `weights=VGG16_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+2025-02-24 16:42:57.421 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-24 16:42:57.421 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-24 16:42:58.405 | INFO     | models.mica.arcface:__init__:169 - [Arcface] Initializing from insightface model from data/pretrained/backbone.pth.
+2025-02-24 16:42:58.406 | INFO     | models.mica.arcface:__init__:169 - [Arcface] Initializing from insightface model from data/pretrained/backbone.pth.
+2025-02-24 16:43:03.970 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-24 16:43:03.973 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-24 16:43:04.002 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-24 16:43:04.007 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/pytorch3d/io/obj_io.py:547: UserWarning: No mtl file provided
+  warnings.warn("No mtl file provided")
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/pytorch3d/io/obj_io.py:547: UserWarning: No mtl file provided
+  warnings.warn("No mtl file provided")
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/pytorch3d/io/obj_io.py:547: UserWarning: No mtl file provided
+  warnings.warn("No mtl file provided")
+2025-02-24 16:43:06.812 | INFO     | data.datapipe_SinSR.datasets_new:initialize_mica:56 - [LYHM] Initialization
+2025-02-24 16:43:06.812 | INFO     | data.datapipe_SinSR.datasets_new:initialize_mica:56 - [LYHM] Initialization
+2025-02-24 16:43:06.812 | INFO     | data.datapipe_SinSR.datasets_new:initialize_mica:58 - [LYHM] Load cached file list: /users/ps1510/scratch/Programs/Sin3dFace/datasets/image_paths/LYHM.npy
+2025-02-24 16:43:06.812 | INFO     | data.datapipe_SinSR.datasets_new:initialize_mica:58 - [LYHM] Load cached file list: /users/ps1510/scratch/Programs/Sin3dFace/datasets/image_paths/LYHM.npy
+2025-02-24 16:43:06.874 | INFO     | data.datapipe_SinSR.datasets_new:initialize_mica:61 - [Dataset LYHM] Total 1211 actors loaded!
+2025-02-24 16:43:06.874 | INFO     | data.datapipe_SinSR.datasets_new:initialize_mica:61 - [Dataset LYHM] Total 1211 actors loaded!
+2025-02-24 16:43:06.874 | INFO     | data.datapipe_SinSR.datasets_new:set_smallest_k:76 - Dataset LYHM with min K = 2, max K = 2, total images = 2422
+2025-02-24 16:43:06.874 | INFO     | data.datapipe_SinSR.datasets_new:set_smallest_k:76 - Dataset LYHM with min K = 2, max K = 2, total images = 2422
+Traceback (most recent call last):
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/main_distill.py", line 53, in <module>
+    trainer.train()
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/trainer.py", line 290, in train
+    data = self.prepare_data(next(self.dataloaders['train']))
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/trainer.py", line 197, in _wrap_loader
+    while True: yield from loader
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1345, in _next_data
+    return self._process_data(data)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1371, in _process_data
+    data.reraise()
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/_utils.py", line 694, in reraise
+    raise exception
+cv2.error: Caught error in DataLoader worker process 0.
+Original Traceback (most recent call last):
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/_utils/worker.py", line 308, in _worker_loop
+    data = fetcher.fetch(index)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 49, in fetch
+    data = self.dataset.__getitems__(possibly_batched_index)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataset.py", line 364, in __getitems__
+    return [self.dataset[self.indices[idx]] for idx in indices]
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataset.py", line 364, in <listcomp>
+    return [self.dataset[self.indices[idx]] for idx in indices]
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/data/datapipe_SinSR/datasets_new.py", line 124, in __getitem__
+    sinSR_image = self.apply_sinSR(image, degrade_factor)
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/data/datapipe_SinSR/datasets_new.py", line 156, in apply_sinSR
+    sinSR_image = cv2.resize(image.transpose(1, 2, 0), dsize=(image.shape[1] // sf, image.shape[2] // sf), interpolation=cv2.INTER_CUBIC)
+cv2.error: OpenCV(4.11.0) :-1: error: (-5:Bad argument) in function 'resize'
+> Overload resolution failed:
+>  - Can't parse 'dsize'. Sequence item with index 0 has a wrong type
+>  - Can't parse 'dsize'. Sequence item with index 0 has a wrong type
+
+
+Traceback (most recent call last):
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/main_distill.py", line 53, in <module>
+    trainer.train()
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/trainer.py", line 290, in train
+    data = self.prepare_data(next(self.dataloaders['train']))
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/trainer.py", line 197, in _wrap_loader
+    while True: yield from loader
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1345, in _next_data
+    return self._process_data(data)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1371, in _process_data
+    data.reraise()
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/_utils.py", line 694, in reraise
+    raise exception
+cv2.error: Caught error in DataLoader worker process 0.
+Original Traceback (most recent call last):
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/_utils/worker.py", line 308, in _worker_loop
+    data = fetcher.fetch(index)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 49, in fetch
+    data = self.dataset.__getitems__(possibly_batched_index)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataset.py", line 364, in __getitems__
+    return [self.dataset[self.indices[idx]] for idx in indices]
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataset.py", line 364, in <listcomp>
+    return [self.dataset[self.indices[idx]] for idx in indices]
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/data/datapipe_SinSR/datasets_new.py", line 124, in __getitem__
+    sinSR_image = self.apply_sinSR(image, degrade_factor)
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/data/datapipe_SinSR/datasets_new.py", line 156, in apply_sinSR
+    sinSR_image = cv2.resize(image.transpose(1, 2, 0), dsize=(image.shape[1] // sf, image.shape[2] // sf), interpolation=cv2.INTER_CUBIC)
+cv2.error: OpenCV(4.11.0) :-1: error: (-5:Bad argument) in function 'resize'
+> Overload resolution failed:
+>  - Can't parse 'dsize'. Sequence item with index 0 has a wrong type
+>  - Can't parse 'dsize'. Sequence item with index 0 has a wrong type
+
+
+Traceback (most recent call last):
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/main_distill.py", line 53, in <module>
+    trainer.train()
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/trainer.py", line 290, in train
+    data = self.prepare_data(next(self.dataloaders['train']))
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/trainer.py", line 197, in _wrap_loader
+    while True: yield from loader
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1345, in _next_data
+    return self._process_data(data)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1371, in _process_data
+    data.reraise()
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/_utils.py", line 694, in reraise
+    raise exception
+cv2.error: Caught error in DataLoader worker process 0.
+Original Traceback (most recent call last):
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/_utils/worker.py", line 308, in _worker_loop
+    data = fetcher.fetch(index)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 49, in fetch
+    data = self.dataset.__getitems__(possibly_batched_index)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataset.py", line 364, in __getitems__
+    return [self.dataset[self.indices[idx]] for idx in indices]
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/utils/data/dataset.py", line 364, in <listcomp>
+    return [self.dataset[self.indices[idx]] for idx in indices]
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/data/datapipe_SinSR/datasets_new.py", line 124, in __getitem__
+    sinSR_image = self.apply_sinSR(image, degrade_factor)
+  File "/mnt/scratch/users/ps1510/Programs/Sin3dFace/data/datapipe_SinSR/datasets_new.py", line 156, in apply_sinSR
+    sinSR_image = cv2.resize(image.transpose(1, 2, 0), dsize=(image.shape[1] // sf, image.shape[2] // sf), interpolation=cv2.INTER_CUBIC)
+cv2.error: OpenCV(4.11.0) :-1: error: (-5:Bad argument) in function 'resize'
+> Overload resolution failed:
+>  - Can't parse 'dsize'. Sequence item with index 0 has a wrong type
+>  - Can't parse 'dsize'. Sequence item with index 0 has a wrong type
+
+
+[2025-02-25 00:40:53,009] torch.distributed.elastic.multiprocessing.api: [ERROR] failed (exitcode: 1) local_rank: 0 (pid: 2169116) of binary: /users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/bin/python
+Traceback (most recent call last):
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 346, in wrapper
+    return f(*args, **kwargs)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/distributed/run.py", line 806, in main
+    run(args)
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/distributed/run.py", line 797, in run
+    elastic_launch(
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 264, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+main_distill.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2025-02-25_00:40:53
+  host      : gpu07.viking2.yor.alces.network
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 2169117)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2025-02-25_00:40:53
+  host      : gpu07.viking2.yor.alces.network
+  rank      : 2 (local_rank: 2)
+  exitcode  : 1 (pid: 2169118)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-02-25_00:40:53
+  host      : gpu07.viking2.yor.alces.network
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 2169116)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

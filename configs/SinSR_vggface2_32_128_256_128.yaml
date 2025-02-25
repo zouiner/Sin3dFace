@@ -89,17 +89,14 @@ degradation:
   gt_size: 256 
   resize_back: False
   use_sharp: False
-  
+
 data:
   train:
-    type: realesrgan
+    type: 3dSin
     params:
-      dir_paths: []
-      txt_file_path: [
-                      'traindata/train.txt', 
-                      'traindata/ffhq256.txt',
-                     ] 
-      im_exts: ['JPEG', ]
+      dir_path: /users/ps1510/scratch/Programs/3d-super-resolution-Face-reconstruction/contents/LYHM_32_128/hr_128
+      dir_path_extra: ~
+      im_exts: ['JPEG', 'png', 'jpg']
       io_backend:
         type: disk
       blur_kernel_size: 21
@@ -144,21 +141,88 @@ train:
   # xT_cov_loss: 0.1
 
   lr: 5e-5
-  batch: [64, 8]   # batchsize for training and validation
+  batch: [24, 2]   # batchsize for training and validation // val size will be K*batch[1] 
   use_fp16: False
-  microbatch: 64 # 16
+  microbatch: 6 # 16 # should be divided by K(2) in MICA # total_b = int(micro_b/K)*num_acc*GPUs
   seed: 123456
   global_seeding: False
   prefetch_factor:  4
-  num_workers: 16
+  num_workers: 1
   ema_rate: 0.999
   iterations: 500000
   milestones: [5000, 500000]
   weight_decay: 0
-  save_freq: 2000
+  save_freq: 1000
   # val_freq:  10000
   # log_freq: [1000, 5000, 1] #[training loss, training images, val images]
   val_freq:  2000
-  log_freq: [200, 5000, 1] #[training loss, training images, val images]
+  log_freq: [1000, 5000, 10] #[training loss, training images, val images]
   save_images: True  # save the images of tensorboard logging
   use_ema_val: True
+  train_size: 0.9 # val size = train_size - 0.2
+
+
+MICA:
+  target: models.mica.mica.MICA
+  ckpt_path: ""
+
+  model:
+    name: 'mica'
+    testing: False
+    topology_path: "data/FLAME2020/head_template.obj"
+    flame_model_path: "data/FLAME2020/generic_model.pkl"
+    flame_lmk_embedding_path: "data/FLAME2020/landmark_embedding.npy"
+    n_shape: 300
+    n_pose: 6
+    n_exp: 50
+    layers: 8
+    hidden_layers_size: 256
+    mapping_layers: 3
+    use_pretrained: False
+    arcface_pretrained_model: "data/pretrained/backbone.pth"
+
+  # Dataset options
+  dataset:
+    root: 'datasets/arcface'
+    training_data: ['LYHM']
+    eval_data: ['LYHM']
+    batch_size: 8
+    num_workers: 4
+    K: 2
+
+  # Mask weights
+  mask_weights:
+    face: 150.0
+    nose: 50.0
+    lips: 50.0
+    forehead: 50.0
+    lr_eye_region: 50.0
+    eye_region: 50.0
+    whole: 1.0
+    ears: 0.01
+    eyes: 0.01
+
+  running_average: 7
+
+  # Training options
+  train:
+    lr: 1e-5
+    arcface_lr: 1e-5
+    weight_decay: 2e-4
+    use_mask: True
+    reset_optimizer: False
+    max_steps: 1600000
+    max_epochs: 50
+    log_steps: 50
+    val_steps: 300
+    vis_steps: 1200
+    val_save_img: 1200
+    checkpoint_steps: 1000
+    checkpoint_epochs_steps: 10000
+    log_dir: 'logs'
+    vis_dir: 'train_images'
+    val_vis_dir: 'val_images'
+    write_summary: True
+
+# export OMP_NUM_THREADS=1
+# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/SinSR_vggface2_16_64_256_64.yaml --save_dir logs/image = np.array(imread(matching_images[0])) / 255.0

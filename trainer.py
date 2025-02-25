@@ -19,7 +19,6 @@ import torch.utils.data as udata
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import torchvision.utils as vutils
-# from torch.utils.tensorboard import SummaryWriter
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import random_split
 
@@ -32,6 +31,8 @@ from basicsr.utils import DiffJPEG, USMSharp
 from basicsr.utils.img_process_util import filter2D
 from basicsr.data.transforms import paired_random_crop
 from basicsr.data.degradations import random_add_gaussian_noise_pt, random_add_poisson_noise_pt
+
+from tensorboardX import SummaryWriter
 
 class TrainerBase:
     def __init__(self, configs):
@@ -96,10 +97,9 @@ class TrainerBase:
 
         # tensorboard logging
         if self.rank == 0:
-            # log_dir = save_dir / 'tf_logs'
-            # if not log_dir.exists():
-                # log_dir.mkdir()
-            # self.writer = SummaryWriter(str(log_dir))
+            log_dir = save_dir / 'tf_logs'
+            log_dir.mkdir(parents=True, exist_ok=True)
+            self.writer = SummaryWriter(str(log_dir))
             self.log_step = {phase: 1 for phase in ['train', 'val']}
             self.log_step_img = {phase: 1 for phase in ['train', 'val']}
 
@@ -131,7 +131,7 @@ class TrainerBase:
 
     def close_logger(self):
         if self.rank == 0:
-            # self.writer.close()
+            self.writer.close()
             pass
 
     def resume_from_ckpt(self):
@@ -923,6 +923,8 @@ class TrainerDistillDifIR(TrainerDifIR):
         state = torch.load(ckpt_path, map_location=f"cuda:{self.rank}")
         if 'state_dict' in state:
             state = state['state_dict']
+        elif 'state_dict_SinSR' in state:
+            state = state['state_dict_SinSR']
         util_net.reload_model(model, state)
     
     def build_model(self):
@@ -992,6 +994,8 @@ class TrainerDistillDifIR(TrainerDifIR):
             ckpt = torch.load(ckpt_path, map_location=f"cuda:{self.rank}")
             if 'state_dict' in ckpt:
                 ckpt = ckpt['state_dict']
+            elif 'state_dict_SinSR' in ckpt:
+                ckpt = ckpt['state_dict_SinSR']
             util_net.reload_model(self.model, ckpt)
             
         # EMA
@@ -1040,6 +1044,7 @@ class TrainerDistillDifIR(TrainerDifIR):
         self.opt_sr.zero_grad()
         self.opt_mica.zero_grad()
         for jj in range(0, current_batchsize, micro_batchsize):
+            self.mica_model.train()
             temp_data = {
                 key: (
                     {
@@ -1052,10 +1057,9 @@ class TrainerDistillDifIR(TrainerDifIR):
                 for key, value in data.items()
             }
             micro_data = {
-                'lq': temp_data['lq'].reshape(-1, *temp_data['lq'].shape[2:]),  # (b*2, 3, 64, 64)
-                'gt': temp_data['gt'].reshape(-1, *temp_data['gt'].shape[2:])   # (b*2, 3, 64, 64)
+                'lq': temp_data['lq'].reshape(-1, *temp_data['lq'].shape[2:]),  # (b*2, 3, s, s)
+                'gt': temp_data['gt'].reshape(-1, *temp_data['gt'].shape[2:])   # (b*2, 3, s, s)
             }
-            # micro_data = {key:value[jj:jj+micro_batchsize,] for key, value in data.items()}
             last_batch = (jj+micro_batchsize >= current_batchsize)
             tt = torch.randint(
                     0, self.base_diffusion.num_timesteps,
@@ -1115,12 +1119,15 @@ class TrainerDistillDifIR(TrainerDifIR):
             # MICA ---------------------------
             
             pred_image = self.base_diffusion.decode_first_stage(
-                        self.base_diffusion._scale_input(z0_pred, tt),
+                        self.base_diffusion._scale_input(z0_pred, tt*0),
                         self.autoencoder, no_grad = False
-                        )  # (-1,1) 
-            
+                        )  # (-1,1)
 
-            batch = self.prepared_mica_batch(self, pred_image, temp_data)
+            pred_image = F.interpolate(pred_image, size=(int(pred_image.shape[-1] / data['degrade_factor'][0]), int(pred_image.shape[-1] / data['degrade_factor'][0])), mode="bilinear", align_corners=False)
+
+            pred_image = self.normalize_tensor(pred_image)
+
+            batch = self.prepared_mica_batch(pred_image, temp_data)
             
 
             if self.configs.train.use_fp16:
@@ -1197,47 +1204,55 @@ class TrainerDistillDifIR(TrainerDifIR):
                 self.logger.info(log_str)
                 self.log_step[phase] += 1
                 
+                # log 
+                for k, v in loss.items():
+                    self.writer.add_scalar('Training Metric: ' + k, v.mean().item(), global_step=self.current_iters)
+
+                
             if self.current_iters % self.configs.train.log_freq[1] == 0 and flag:
+                save_path = self.image_dir / phase / f"{self.current_iters}"
+                save_path.mkdir(parents=True, exist_ok=True)
+
                 x1 = vutils.make_grid(batch['lq'], normalize=True, scale_each=True)  # c x h x w
-                # self.writer.add_image("Training LQ Image", x1, self.log_step_img[phase])
+                self.writer.add_image("Training LQ Image", x1, self.log_step_img[phase])
                 if self.configs.train.save_images:
                     util_image.imwrite(
                            x1.cpu().permute(1,2,0).numpy(),
-                           self.image_dir / phase / f"lq_{self.log_step_img[phase]:05d}.png",
+                           save_path / f"lq_{self.log_step_img[phase]:05d}.png",
                            )
                 x2 = vutils.make_grid(batch['gt'], normalize=True)
-                # self.writer.add_image("Training HQ Image", x2, self.log_step_img[phase])
+                self.writer.add_image("Training HQ Image", x2, self.log_step_img[phase])
                 if self.configs.train.save_images:
                     util_image.imwrite(
                            x2.cpu().permute(1,2,0).numpy(),
-                           self.image_dir / phase / f"hq_{self.log_step_img[phase]:05d}.png",
+                           save_path / f"hq_{self.log_step_img[phase]:05d}.png",
                            )
                 x_t = self.base_diffusion.decode_first_stage(
                         self.base_diffusion._scale_input(z_t, tt),
                         self.autoencoder,
                         )
                 x3 = vutils.make_grid(x_t, normalize=True, scale_each=True)
-                # self.writer.add_image("Training Diffused Image", x3, self.log_step_img[phase])
+                self.writer.add_image("Training Diffused Image", x3, self.log_step_img[phase])
                 if self.configs.train.save_images:
                     util_image.imwrite(
                            x3.cpu().permute(1,2,0).numpy(),
-                           self.image_dir / phase / f"diffused_{self.log_step_img[phase]:05d}.png",
+                           save_path / f"diffused_{self.log_step_img[phase]:05d}.png",
                            )
                 x0_pred = self.base_diffusion.decode_first_stage(
                         self.base_diffusion._scale_input(z0_pred, tt),
                         self.autoencoder,
                         )
                 x4 = vutils.make_grid(x0_pred, normalize=True, scale_each=True)
-                # self.writer.add_image("Training Predicted Image", x4, self.log_step_img[phase])
+                self.writer.add_image("Training Predicted Image", x4, self.log_step_img[phase])
                 if self.configs.train.save_images:
                     util_image.imwrite(
                            x4.cpu().permute(1,2,0).numpy(),
-                           self.image_dir / phase / f"x0_pred_{self.log_step_img[phase]:05d}.png",
+                           save_path / f"x0_pred_{self.log_step_img[phase]:05d}.png",
                            )
                 
                     # Save 3d mica obj
 
-                    self.visualize_mica(self, opdict, self.image_dir / phase)
+                self.visualize_mica( opdict, save_path, f"{self.log_step_img[phase]:05d}")
 
                 self.log_step_img[phase] += 1
 
@@ -1266,11 +1281,11 @@ class TrainerDistillDifIR(TrainerDifIR):
                 # data = self.prepare_data(data, phase='val')
                 if 'gt' in data:
                     # im_lq, im_gt = data['lq'], data['gt']
-                    im_lq = data['lq'].reshape(-1, *data['lq'].shape[2:])  # (b*2, 3, 64, 64)
-                    im_gt = data['gt'].reshape(-1, *data['gt'].shape[2:])   # (b*2, 3, 64, 64)
+                    im_lq = data['lq'].reshape(-1, *data['lq'].shape[2:]).to(self.rank)  # (b*2, 3, 64, 64)
+                    im_gt = data['gt'].reshape(-1, *data['gt'].shape[2:]).to(self.rank)   # (b*2, 3, 64, 64)
                 else:
                     # im_lq = data['lq']
-                    im_lq = data['lq'].reshape(-1, *data['lq'].shape[2:])  # (b*2, 3, 64, 64)
+                    im_lq = data['lq'].reshape(-1, *data['lq'].shape[2:]).to(self.rank)  # (b*2, 3, 64, 64)
 
                 model_kwargs={'lq':im_lq,} if self.configs.model.params.cond_lq else None
                 
@@ -1285,12 +1300,15 @@ class TrainerDistillDifIR(TrainerDifIR):
                     progress=False,
                     one_step=True
                     )
-                
-                batch = self.prepared_mica_batch(results, data)
+
+                pred_image = F.interpolate(results, size=(int(results.shape[-1] / data['degrade_factor'][0]), int(results.shape[-1] / data['degrade_factor'][0])), mode="bilinear", align_corners=False)
+                pred_image = self.normalize_tensor(pred_image)
+
+                batch = self.prepared_mica_batch(pred_image, data)
             
                 with torch.no_grad():
                     input_mica, opdict, encoder_output, decoder_output = self.mica_model.training_MICA(batch)
-                
+
                 if 'gt' in data:
                     mean_psnr += util_image.batch_PSNR(
                             results.detach() * 0.5 + 0.5,
@@ -1304,42 +1322,52 @@ class TrainerDistillDifIR(TrainerDifIR):
                 if (ii + 1) % self.configs.train.log_freq[2] == 0:
                     self.logger.info(f'Validation: {ii+1:02d}/{num_iters_epoch:02d}...')
 
+                    save_path = self.image_dir / phase / f"{self.current_iters}"
+                    save_path.mkdir(parents=True, exist_ok=True)
+
                     x2 = vutils.make_grid(results.detach(), normalize=True, scale_each=True)
-                    # self.writer.add_image('Validation Sample Progress', x1, self.log_step_img[phase])
+                    self.writer.add_image('Validation Sample Progress', x2, self.log_step_img[phase])
                     if self.configs.train.save_images:
                         util_image.imwrite(
                                x2.cpu().permute(1,2,0).numpy(),
-                               self.image_dir / phase / f"predict_x_{self.log_step_img[phase]:05d}.png",
+                               save_path / f"predict_x_{self.log_step_img[phase]:05d}.png",
                                )
                         
-                        self.visualize_mica(self, opdict, self.image_dir / phase)
+                        self.visualize_mica( opdict, save_path, f"{self.log_step_img[phase]:05d}")
                     
                     x3 = vutils.make_grid(im_lq, normalize=True)
-                    # self.writer.add_image('Validation LQ Image', x3, self.log_step_img[phase])
+                    self.writer.add_image('Validation LQ Image', x3, self.log_step_img[phase])
                     if self.configs.train.save_images:
                         util_image.imwrite(
                                x3.cpu().permute(1,2,0).numpy(),
-                               self.image_dir / phase / f"lq_{self.log_step_img[phase]:05d}.png",
+                               save_path / f"lq_{self.log_step_img[phase]:05d}.png",
                                )
                     if 'gt' in data:
                         x4 = vutils.make_grid(im_gt, normalize=True)
-                        # self.writer.add_image('Validation HQ Image', x4, self.log_step_img[phase])
+                        self.writer.add_image('Validation HQ Image', x4, self.log_step_img[phase])
                         if self.configs.train.save_images:
                             util_image.imwrite(
                                    x4.cpu().permute(1,2,0).numpy(),
-                                   self.image_dir / phase / f"hq_{self.log_step_img[phase]:05d}.png",
+                                   save_path / f"hq_{self.log_step_img[phase]:05d}.png",
                                    )
                     self.log_step_img[phase] += 1
                     
             mean_clipiqa /= len(self.datasets[phase])
             mean_musiq /= len(self.datasets[phase])
-            self.logger.info(f'Validation Metric: MUSIQ={mean_musiq:5.2f}, clipiqa={mean_clipiqa:6.4f}...')
+            
+            # Calculate loss
+            loss = self.mica_model.compute_losses(None, None, opdict)['pred_verts_shape_canonical_diff']
+            loss_info = f"Step: {self.log_step[phase]} \n"
+            loss_info += f'  Validation MICA loss (average)         : {loss:.5f} \n'
+            self.logger.info(loss_info)
+
+            self.logger.info(f'  Validation SR Metric: MUSIQ={mean_musiq:5.2f}, clipiqa={mean_clipiqa:6.4f}...')
             if 'gt' in data:
                 mean_psnr /= len(self.datasets[phase])
                 mean_lpips /= len(self.datasets[phase])
-                self.logger.info(f'Validation Metric: PSNR={mean_psnr:5.2f}, LPIPS={mean_lpips:6.4f}...')
-                # self.writer.add_scalar('Validation PSNR', mean_psnr, self.log_step[phase])
-                # self.writer.add_scalar('Validation LPIPS', mean_lpips, self.log_step[phase])
+                self.logger.info(f'  Validation SR Metric: PSNR={mean_psnr:5.2f}, LPIPS={mean_lpips:6.4f}...')
+                self.writer.add_scalar('Validation PSNR', mean_psnr, self.log_step[phase])
+                self.writer.add_scalar('Validation LPIPS', mean_lpips, self.log_step[phase])
                 self.log_step[phase] += 1
 
             self.logger.info("="*100)
@@ -1393,15 +1421,15 @@ class TrainerFaceRecon(TrainerDistillDifIR):  # Or TrainerDifIR if you're using 
         super().build_model()  # Keep everything the same
         # Add 3D Face Reconstruction Model
         from models.mica.mica import MICA
-        self.mica_model = MICA(config=self.configs.MICA, device=f"cuda:{self.rank}").cuda()
+        self.mica_model = MICA(config=self.configs.MICA, device=f"cuda:{self.rank}")
         if self.configs.model.ckpt_path:
             ckpt = torch.load(self.configs.model.ckpt_path, map_location=f"cuda:{self.rank}")
             if 'state_dict_mica' in ckpt:
                 ckpt = ckpt['state_dict_mica']
+                util_net.reload_model(self.mica_model, ckpt)
             else:
                 if self.rank == 0:
-                    self.logger.info('Checkpoint path: does not have a MICA model')
-            util_net.reload_model(self.mica_model, ckpt)
+                    self.logger.info('Checkpoint path: does not have a MICA model. Train MICA on scratch')
         self.mica_model.eval()
 
         # print model info ...
@@ -1425,7 +1453,7 @@ class TrainerFaceRecon(TrainerDistillDifIR):  # Or TrainerDifIR if you're using 
             self.mica_model.eval()
             optdicts = []
 
-            batch = self.prepared_mica_batch(self, images, temp_data)
+            batch = self.prepared_mica_batch( images, temp_data)
 
             for i in range(len(batch)):
                 actors = batch['imagename'][i]
@@ -1451,9 +1479,9 @@ class TrainerFaceRecon(TrainerDistillDifIR):  # Or TrainerDifIR if you're using 
         visdict = {
             'input_images': opdict['images'],
         }
-        # add images to tensorboard
-        for k, v in visdict.items():
-            self.logger.add_images(k, np.clip(v.detach().cpu(), 0.0, 1.0), self.current_iters)
+        # # add images to tensorboard
+        # for k, v in visdict.items():
+        #     self.logger.add_images(k, np.clip(v.detach().cpu(), 0.0, 1.0), self.current_iters)
 
         pred_canonical_shape_vertices = torch.empty(0, 3, 512, 512).cuda()
         flame_verts_shape = torch.empty(0, 3, 512, 512).cuda()
@@ -1483,7 +1511,7 @@ class TrainerFaceRecon(TrainerDistillDifIR):  # Or TrainerDifIR if you're using 
         visdict["flame_verts_shape"] = flame_verts_shape
         visdict["images"] = input_images
         if name:
-            savepath = path / '3d_obj_' + name + '.jpg'
+            savepath = path / f"3d_obj_{name}.jpg"
         else:
             savepath = path / '3d_obj.jpg'
         util.visualize_grid(visdict, savepath, size=512, return_gird = False)
@@ -1508,3 +1536,29 @@ class TrainerFaceRecon(TrainerDistillDifIR):  # Or TrainerDifIR if you're using 
         batch['sinSR_type'] = temp_data['sinSR_type']
 
         return batch
+    
+    def normalize_tensor(self, tensor, min_value=-1, max_value=1, data_min=None, data_max=None):
+        """
+        Normalize tensor to a specified range [min_value, max_value].
+
+        Args:
+            tensor (torch.Tensor): Input tensor.
+            min_value (float): Desired minimum value after normalization.
+            max_value (float): Desired maximum value after normalization.
+            data_min (float, optional): Minimum value of the input data. If None, uses tensor.min().
+            data_max (float, optional): Maximum value of the input data. If None, uses tensor.max().
+
+        Returns:
+            torch.Tensor: Normalized tensor.
+        """
+        # Use provided min/max if given, otherwise compute from tensor
+        data_min = tensor.min() if data_min is None else data_min
+        data_max = tensor.max() if data_max is None else data_max
+
+        # Normalize to [0,1]
+        normalized_tensor = (tensor - data_min) / (data_max - data_min)
+
+        # Scale to [min_value, max_value]
+        normalized_tensor = normalized_tensor * (max_value - min_value) + min_value
+
+        return normalized_tensor

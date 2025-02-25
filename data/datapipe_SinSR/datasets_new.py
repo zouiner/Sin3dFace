@@ -45,17 +45,20 @@ class CombinedDataset(Dataset):
         self.imagepaths = []
         self.face_dict = {}
 
-        # Load image paths for MICA dataset
-        self.initialize_mica()
-
+        
         # SinSR parameters (same image order as MICA)
         self.sinSR_config = sinSR_config
 
-    def initialize_mica(self):
+        # Load image paths 
+        self.initialize()
+
+
+    def initialize(self):
         """Initialize MICA dataset by loading face image paths."""
         logger.info(f'[{self.name}] Initialization')
         image_list = f'/users/ps1510/scratch/Programs/Sin3dFace/datasets/image_paths/{self.name}.npy'
-        logger.info(f'[{self.name}] Load cached file list: {image_list}')
+        self.content_image_path = Path(self.sinSR_config.params.dir_path)
+        logger.info(f'[{self.name}] Load image files: {self.content_image_path}')
         self.face_dict = np.load(image_list, allow_pickle=True).item()
         self.imagepaths = list(self.face_dict.keys())
         logger.info(f'[Dataset {self.name}] Total {len(self.imagepaths)} actors loaded!')
@@ -110,16 +113,27 @@ class CombinedDataset(Dataset):
         images_list, sinSR_list = [], []
         for i in sample_list:
             image_path = images[i]
-            image = np.array(imread(image_path)) / 255.0
+            # Extract 'a' (parent directory name)
+            a = image_path.parent.name 
+            # Extract 'b' (filename without extension)
+            b = image_path.stem
+
+            matching_images = sorted(self.content_image_path.glob(f"*_{a}_{b}.png"))
+
+            image = np.array(imread(matching_images[0])) / 255.0
             image = image.transpose(2, 0, 1)
+
+            # degradation 
+            degrade_factor = int(self.gt_size / image.shape[-1])
 
             #!!! test the model - will delete after can set it to train on any resolutions
             # Resize the image to self.gt_size (assuming it's square)
             image = np.array([cv2.resize(image[c], (self.gt_size, self.gt_size), interpolation=cv2.INTER_CUBIC) for c in range(image.shape[0])])
 
+            
 
             # Apply SinSR transformation on the same image
-            sinSR_image = self.apply_sinSR(image)
+            sinSR_image = self.apply_sinSR(image, degrade_factor)
 
             images_list.append(image)
             sinSR_list.append(sinSR_image)
@@ -134,15 +148,16 @@ class CombinedDataset(Dataset):
             'dataset': self.name,
             'flame': flame,
             'sinSR_type': self.sinSR_config['type'],  # Type of SinSR transformation
+            'degrade_factor': degrade_factor
         }
 
-    def apply_sinSR(self, image):
+    def apply_sinSR(self, image, degrade_factor = 4):
         """
         Apply SinSR degradation based on the provided configuration.
         :param image: Input image from MICA.
         :return: Transformed SinSR image.
         """
-        sf = self.sinSR_config.get('scale_factor', 4)
+        sf = self.sinSR_config.get('scale_factor', 4) * int(degrade_factor)
         degradation_type = self.sinSR_config['type']
 
         if degradation_type == 'bsrgan':
@@ -152,6 +167,7 @@ class CombinedDataset(Dataset):
             sinSR_image = np.clip(sinSR_image, 0.0, 1.0).transpose(2, 0, 1)  # Convert back to CxHxW
         elif degradation_type == '3dSin':
             sinSR_image = cv2.resize(image.transpose(1, 2, 0), dsize=(image.shape[1] // sf, image.shape[2] // sf), interpolation=cv2.INTER_CUBIC)
+            sinSR_image = cv2.resize(sinSR_image, dsize=(sinSR_image.shape[0] * int(degrade_factor), sinSR_image.shape[1] * int(degrade_factor)))
             sinSR_image = np.clip(sinSR_image, 0.0, 1.0).transpose(2, 0, 1)  # Convert back to CxHxW
         elif degradation_type == 'realesrgan':
             sinSR_image = util_image.imresize_np(image, scale=1/sf)

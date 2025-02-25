@@ -1,0 +1,27 @@
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=VGG16_Weights.IMAGENET1K_V1`. You can also use `weights=VGG16_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+2025-02-25 08:34:44.022 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-25 08:34:44.022 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-25 08:34:45.379 | INFO     | models.mica.arcface:__init__:169 - [Arcface] Initializing from insightface model from data/pretrained/backbone.pth.
+2025-02-25 08:34:45.379 | INFO     | models.mica.arcface:__init__:169 - [Arcface] Initializing from insightface model from data/pretrained/backbone.pth.
+2025-02-25 08:34:55.093 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-25 08:34:55.094 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-25 08:34:55.124 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+2025-02-25 08:34:55.128 | INFO     | models.mica.flame:__init__:54 - [FLAME] creating the FLAME Decoder
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/pytorch3d/io/obj_io.py:547: UserWarning: No mtl file provided
+  warnings.warn("No mtl file provided")
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/pytorch3d/io/obj_io.py:547: UserWarning: No mtl file provided
+  warnings.warn("No mtl file provided")
+/users/ps1510/scratch/python/.cache/python_environments/envs/3dSin/lib/python3.10/site-packages/pytorch3d/io/obj_io.py:547: UserWarning: No mtl file provided
+  warnings.warn("No mtl file provided")
+2025-02-25 08:35:00.362 | INFO     | data.datapipe_SinSR.datasets_new:initialize:58 - [LYHM] Initialization
+2025-02-25 08:35:00.362 | INFO     | data.datapipe_SinSR.datasets_new:initialize:61 - [LYHM] Load image files: /users/ps1510/scratch/Programs/3d-super-resolution-Face-reconstruction/contents/LYHM_16_64/hr_64
+2025-02-25 08:35:00.367 | INFO     | data.datapipe_SinSR.datasets_new:initialize:58 - [LYHM] Initialization
+2025-02-25 08:35:00.367 | INFO     | data.datapipe_SinSR.datasets_new:initialize:61 - [LYHM] Load image files: /users/ps1510/scratch/Programs/3d-super-resolution-Face-reconstruction/contents/LYHM_16_64/hr_64
+2025-02-25 08:35:00.407 | INFO     | data.datapipe_SinSR.datasets_new:initialize:64 - [Dataset LYHM] Total 1211 actors loaded!
+2025-02-25 08:35:00.407 | INFO     | data.datapipe_SinSR.datasets_new:initialize:64 - [Dataset LYHM] Total 1211 actors loaded!
+2025-02-25 08:35:00.408 | INFO     | data.datapipe_SinSR.datasets_new:set_smallest_k:79 - Dataset LYHM with min K = 2, max K = 2, total images = 2422
+2025-02-25 08:35:00.408 | INFO     | data.datapipe_SinSR.datasets_new:set_smallest_k:79 - Dataset LYHM with min K = 2, max K = 2, total images = 2422
+slurmstepd: error: *** JOB 16301043 ON gpu09 CANCELLED AT 2025-02-25T10:24:40 ***
