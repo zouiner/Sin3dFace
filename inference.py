@@ -121,12 +121,13 @@ def main():
             )
 
     resshift_sampler.inference(args.in_path, args.out_path, bs=1, noise_repeat=False, one_step=args.one_step)
-    import evaluate
-    evaluate.evaluate(args.out_path, args.ref_path, None)
+    # import evaluate
+    # evaluate.evaluate(args.out_path, args.ref_path, None)
     
     
 if __name__ == '__main__':
     main()
 
 
-# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client inference.py -i /users/ps1510/scratch/Programs/3d-super-resolution-Face-reconstruction/contents/NoW_MICA_8_64/sr_8_64 -o results/LYHM_8_64 --scale 4 --ckpt /users/ps1510/scratch/Programs/Sin3dFace/logs/SinSR_vggface2_16_64_256_64/2025-02-25-10-31/ckpts/model_1000.pth --one_step --config configs/SinSR_vggface2_16_64_256_64.yaml
+# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client inference.py -i /users/ps1510/scratch/Programs/3d-super-resolution-Face-reconstruction/contents/NoW_MICA_16_64/sr_16_64 -o results/NoW_16_64 --scale 4 --ckpt /users/ps1510/scratch/Programs/Sin3dFace/logs/SinSR_vggface2_16_64_256_64/2025-03-03-22-45/best_model.pth --one_step --config configs/SinSR_vggface2_16_64_256_64.yaml
+# python3 inference.py -i /users/ps1510/scratch/Programs/3d-super-resolution-Face-reconstruction/contents/NoW_MICA_16_64/sr_16_64 -o results/NoW_16_64 --scale 4 --ckpt /users/ps1510/scratch/Programs/Sin3dFace/logs/SinSR_vggface2_16_64_256_64/2025-03-03-22-45/best_model.pth --one_step --config configs/SinSR_vggface2_16_64_256_64.yaml

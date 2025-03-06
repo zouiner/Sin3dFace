@@ -120,9 +120,10 @@ class BaseSampler:
             util_net.reload_model(model, state_SR)
         elif 'state_dict_SinSR' in state:
             state_SR = state['state_dict_SinSR']
-            state_MICA = state['state_dict_mica']
             util_net.reload_model(model, state_SR)
-            util_net.reload_model(self.mica_model, state_MICA)
+            self.mica_model.flameModel.load_state_dict(state['flameModel'])
+            self.mica_model.arcface.load_state_dict(state['arcface'])
+
         else:
             util_net.reload_model(model, state)
         if 'iters_start' in state:
@@ -297,7 +298,7 @@ class Sampler(BaseSampler):
                     im_sr_tensor = _process_per_image(im_lq_tensor)
                     
                     # make it to be the same size with the real
-                    im_sr_tensor = F.interpolate(im_sr_tensor, size=(int(im_lq.shape[-1]), int(im_lq.shape[-1])), mode="bilinear", align_corners=False)
+                    im_sr_tensor = F.interpolate(im_sr_tensor, size=(int(im_lq.shape[0]), int(im_lq.shape[0])))
                     
                     im_sr = util_image.tensor2img(im_sr_tensor, rgb2bgr=True, min_max=(0.0, 1.0))
 
@@ -313,6 +314,7 @@ class Sampler(BaseSampler):
                     image_mica = self.mica_model.tensor2tensor_img(im_sr_tensor, size = 224) * 255.0
                     temp = self.mica_model.create_tensor_blob(image_mica)
                     arcface = temp.detach().cuda().unsqueeze(0) # (3, 112, 112) -> (1,3,112,112)
+                    arcface = 2*arcface - 1 # (0,1) -> (-1,1)
                     image = image_mica.detach().cuda().unsqueeze(0) / 255.0 # (3, 224, 224) -> (1,3,224,224)
                     
                     codedict = self.mica_model.encode(image, arcface)

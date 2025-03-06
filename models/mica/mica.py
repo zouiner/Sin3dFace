@@ -186,3 +186,11 @@ class MICA(BaseModel):
             opdict['deca'] = decoder_output['deca']
 
         return inputs, opdict, encoder_output, decoder_output
+    
+    def train(self):
+        self.arcface.train()
+        self.flameModel.train()
+
+    def eval(self):
+        self.arcface.eval()
+        self.flameModel.eval()

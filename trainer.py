@@ -86,6 +86,7 @@ class TrainerBase:
             save_dir = Path(self.configs.save_dir) / datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
             if not save_dir.exists() and self.rank == 0:
                 save_dir.mkdir(parents=True)
+        self.save_dir = save_dir
 
         # text logging
         if self.rank == 0:
@@ -282,8 +283,11 @@ class TrainerBase:
         self.build_iqa()
         
         self.model.train()
+        self.mica_model.train()
+        self.best_loss = None
         num_iters_epoch = math.ceil(len(self.datasets['train']) / self.configs.train.batch[0])
-        for ii in range(self.iters_start, self.configs.train.iterations):
+        # for ii in range(self.iters_start, self.configs.train.iterations): max_steps
+        for ii in range(self.iters_start, self.configs.MICA.train.max_steps):
             self.current_iters = ii + 1
 
             # prepare data
@@ -316,14 +320,27 @@ class TrainerBase:
         assert hasattr(self, 'lr_sheduler')
         self.lr_sheduler.step()
 
-    def save_ckpt(self):
+    def save_ckpt(self, best_ckpt = None):
         if self.rank == 0:
-            ckpt_path = self.ckpt_dir / 'model_{:d}.pth'.format(self.current_iters)
+            if not best_ckpt:
+                ckpt_path = self.ckpt_dir / 'model_{:d}.pth'.format(self.current_iters)
+            else:
+                ckpt_path = self.save_dir / 'best_model.pth'
+                output_file_path = self.save_dir / 'best_model.txt'
+                message = '<iter:{:8,d}, loss: {:4f}> '.format(
+                    self.current_iters, self.best_loss
+                )
+                # Write the message to the file using the with statement
+                with open(output_file_path, 'w') as file:
+                    file.write(message)
+                self.logger.info(message)
+
             torch.save({'iters_start': self.current_iters,
                         'log_step': {phase:self.log_step[phase] for phase in ['train', 'val']},
                         'log_step_img': {phase:self.log_step_img[phase] for phase in ['train', 'val']},
                         'state_dict_SinSR': self.model.state_dict(),
-                        'state_dict_mica': self.mica_model.state_dict()}, ckpt_path)
+                        'flameModel': self.mica_model.flameModel.state_dict(),
+                        'arcface': self.mica_model.arcface.state_dict()}, ckpt_path),
             if hasattr(self, 'ema_rate'):
                 ema_ckpt_path = self.ema_ckpt_dir / 'ema_model_{:d}.pth'.format(self.current_iters)
                 torch.save(self.ema_state, ema_ckpt_path)
@@ -374,7 +391,7 @@ class TrainerBase:
                     self.loss_mean[key] /= self.loss_count
                 log_str = 'Train: {:06d}/{:06d}, Loss/MSE: '.format(
                         self.current_iters,
-                        self.configs.train.iterations)
+                        self.configs.MICA.train.max_steps)
                 for jj, current_record in enumerate(record_steps):
                     log_str += 't({:d}):{:.2e}/{:.2e}, '.format(
                             current_record,
@@ -1195,7 +1212,7 @@ class TrainerDistillDifIR(TrainerDifIR):
                     
                 log_str = 'Train: {:06d}/{:06d}: '.format(
                         self.current_iters,
-                        self.configs.train.iterations)
+                        self.configs.MICA.train.max_steps)
                 
                 for key, val in self.loss_mean.items():
                     log_str += f'{key}:{val[0].item():.2e} '
@@ -1272,6 +1289,8 @@ class TrainerDistillDifIR(TrainerDifIR):
                 self.ema_model.eval()
             else:
                 self.model.eval()
+            
+            self.mica_model.eval()
 
             indices = [int(self.base_diffusion.num_timesteps * x) for x in [0.25, 0.5, 0.75, 1]]
             batch_size = self.configs.train.batch[1]
@@ -1361,6 +1380,14 @@ class TrainerDistillDifIR(TrainerDifIR):
             loss_info += f'  Validation MICA loss (average)         : {loss:.5f} \n'
             self.logger.info(loss_info)
 
+            if not self.best_loss:
+                self.best_loss = loss
+                self.save_ckpt(True)
+            elif  self.best_loss > loss:
+                self.best_loss = loss
+                self.save_ckpt(True)
+
+
             self.logger.info(f'  Validation SR Metric: MUSIQ={mean_musiq:5.2f}, clipiqa={mean_clipiqa:6.4f}...')
             if 'gt' in data:
                 mean_psnr /= len(self.datasets[phase])
@@ -1368,12 +1395,14 @@ class TrainerDistillDifIR(TrainerDifIR):
                 self.logger.info(f'  Validation SR Metric: PSNR={mean_psnr:5.2f}, LPIPS={mean_lpips:6.4f}...')
                 self.writer.add_scalar('Validation PSNR', mean_psnr, self.log_step[phase])
                 self.writer.add_scalar('Validation LPIPS', mean_lpips, self.log_step[phase])
+                self.writer.add_scalar('Validation MICA loss (average)', loss, self.log_step[phase])
                 self.log_step[phase] += 1
 
             self.logger.info("="*100)
 
             if not self.configs.train.use_ema_val:
                 self.model.train()
+            self.mica_model.train()
         
 def replace_nan_in_batch(im_lq, im_gt):
     '''
@@ -1424,12 +1453,13 @@ class TrainerFaceRecon(TrainerDistillDifIR):  # Or TrainerDifIR if you're using 
         self.mica_model = MICA(config=self.configs.MICA, device=f"cuda:{self.rank}")
         if self.configs.model.ckpt_path:
             ckpt = torch.load(self.configs.model.ckpt_path, map_location=f"cuda:{self.rank}")
-            if 'state_dict_mica' in ckpt:
-                ckpt = ckpt['state_dict_mica']
-                util_net.reload_model(self.mica_model, ckpt)
+            if 'flameModel' in ckpt:
+                self.mica_model.flameModel.load_state_dict(ckpt['flameModel'])
             else:
                 if self.rank == 0:
                     self.logger.info('Checkpoint path: does not have a MICA model. Train MICA on scratch')
+            if 'arcface' in ckpt:
+                self.mica_model.arcface.load_state_dict(ckpt['arcface'])
         self.mica_model.eval()
 
         # print model info ...

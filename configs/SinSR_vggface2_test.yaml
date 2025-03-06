@@ -211,7 +211,7 @@ MICA:
     weight_decay: 2e-4
     use_mask: True
     reset_optimizer: False
-    max_steps: 1600000
+    max_steps: 160000
     max_epochs: 50
     log_steps: 50
     val_steps: 300
