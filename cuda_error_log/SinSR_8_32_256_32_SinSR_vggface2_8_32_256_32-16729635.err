@@ -24,3 +24,4 @@
 2025-03-04 01:01:59.737 | INFO     | data.datapipe_SinSR.datasets_new:initialize:64 - [Dataset LYHM] Total 1211 actors loaded!
 2025-03-04 01:01:59.737 | INFO     | data.datapipe_SinSR.datasets_new:set_smallest_k:79 - Dataset LYHM with min K = 2, max K = 2, total images = 2422
 2025-03-04 01:01:59.737 | INFO     | data.datapipe_SinSR.datasets_new:set_smallest_k:79 - Dataset LYHM with min K = 2, max K = 2, total images = 2422
+slurmstepd: error: *** JOB 16729635 ON gpu14 CANCELLED AT 2025-03-06T15:15:41 ***

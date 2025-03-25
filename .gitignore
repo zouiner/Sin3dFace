@@ -27,6 +27,12 @@ contents/
 cuda_log/
 sr_pretrained_model/
 
+# Slurm
+cuda_error_log/
+cuda_log/
+run.sh
+run*.sh
+
 # data
 data/weights
 data/FLAME2020

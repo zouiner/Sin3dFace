@@ -152,7 +152,15 @@ class TrainerBase:
             if self.rank == 0:
                 self.logger.info(f"=> Loaded checkpoint from {self.configs.resume}")
             ckpt = torch.load(self.configs.resume, map_location=f"cuda:{self.rank}")
-            util_net.reload_model(self.model, ckpt['state_dict'])
+            util_net.reload_model(self.model, ckpt['state_dict_SinSR'])
+
+            if 'flameModel' in ckpt:
+                self.mica_model.flameModel.load_state_dict(ckpt['flameModel'])
+            else:
+                if self.rank == 0:
+                    self.logger.info('Checkpoint path: does not have a MICA model. Train MICA on scratch')
+            if 'arcface' in ckpt:
+                self.mica_model.arcface.load_state_dict(ckpt['arcface'])
 
             # learning rate scheduler
             self.iters_start = ckpt['iters_start']
@@ -1451,15 +1459,6 @@ class TrainerFaceRecon(TrainerDistillDifIR):  # Or TrainerDifIR if you're using 
         # Add 3D Face Reconstruction Model
         from models.mica.mica import MICA
         self.mica_model = MICA(config=self.configs.MICA, device=f"cuda:{self.rank}")
-        if self.configs.model.ckpt_path:
-            ckpt = torch.load(self.configs.model.ckpt_path, map_location=f"cuda:{self.rank}")
-            if 'flameModel' in ckpt:
-                self.mica_model.flameModel.load_state_dict(ckpt['flameModel'])
-            else:
-                if self.rank == 0:
-                    self.logger.info('Checkpoint path: does not have a MICA model. Train MICA on scratch')
-            if 'arcface' in ckpt:
-                self.mica_model.arcface.load_state_dict(ckpt['arcface'])
         self.mica_model.eval()
 
         # print model info ...

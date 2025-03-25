@@ -118,11 +118,13 @@ class BaseSampler:
         if 'state_dict' in state:
             state_SR = state['state_dict']
             util_net.reload_model(model, state_SR)
+            self.write_log(f'Loading SR model from checkpoint. No MICA model in checkpoint.')
         elif 'state_dict_SinSR' in state:
             state_SR = state['state_dict_SinSR']
             util_net.reload_model(model, state_SR)
             self.mica_model.flameModel.load_state_dict(state['flameModel'])
             self.mica_model.arcface.load_state_dict(state['arcface'])
+            self.write_log(f'Loading SR and MICA model from checkpoint.')
 
         else:
             util_net.reload_model(model, state)
@@ -295,10 +297,13 @@ class Sampler(BaseSampler):
                 for im_path in tqdm(im_path_list, desc="Processing Images", unit="img"):
                     im_lq = util_image.imread(im_path, chn='rgb', dtype='float32')  # h x w x c
                     im_lq_tensor = util_image.img2tensor(im_lq).cuda()              # 1 x c x h x w
+                    if im_lq.shape[0] < 64:
+                        im_lq_tensor = F.interpolate(im_lq_tensor, size=64, mode='bilinear', align_corners=False) # -> 64 x 64
                     im_sr_tensor = _process_per_image(im_lq_tensor)
                     
                     # make it to be the same size with the real
-                    im_sr_tensor = F.interpolate(im_sr_tensor, size=(int(im_lq.shape[0]), int(im_lq.shape[0])))
+                    if im_lq.shape[0] < 64:
+                        im_sr_tensor = F.interpolate(im_sr_tensor, size=(int(im_lq.shape[0]), int(im_lq.shape[0])))
                     
                     im_sr = util_image.tensor2img(im_sr_tensor, rgb2bgr=True, min_max=(0.0, 1.0))
 

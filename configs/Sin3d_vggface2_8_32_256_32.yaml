@@ -1,6 +1,6 @@
 model:
   target: models.SinSR.unet.UNetModelSwin
-  ckpt_path: /users/ps1510/scratch/Programs/Sin3dFace/data/weights/SinSR_v2.pth
+  ckpt_path: /users/ps1510/scratch/Programs/SinSR/logs/model/SinSR_train_8_32/model_30000.pth # /users/ps1510/scratch/Programs/Sin3dFace/data/weights/SinSR_v2.pth
   teacher_ckpt_path: data/weights/resshift_realsrx4_s15_v1.pth
   params:
     image_size: 64
@@ -225,4 +225,6 @@ MICA:
     write_summary: True
 
 # export OMP_NUM_THREADS=1
-# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/SinSR_vggface2_8_32_256_32.yaml --save_dir logs/SinSR_vggface2_8_32_256_32
+# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/Sin3d_vggface2_8_32_256_32.yaml --save_dir logs/Sin3d_vggface2_8_32_256_32
+# python3 -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/Sin3d_vggface2_8_32_256_32.yaml --save_dir logs/SinSR_vggface2_8_32_256_32 --resume /users/ps1510/scratch/Programs/Sin3dFace/logs/SinSR_vggface2_8_32_256_32/2025-03-16-14-38/ckpts/model_69000.pth
+# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client main_distill.py --cfg_path configs/Sin3d_vggface2_8_32_256_32.yaml --save_dir logs/SinSR_vggface2_8_32_256_32 --resume /users/ps1510/scratch/Programs/Sin3dFace/logs/SinSR_vggface2_8_32_256_32/2025-03-16-14-38/ckpts/model_69000.pth

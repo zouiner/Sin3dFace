@@ -1,6 +1,6 @@
 model:
   target: models.SinSR.unet.UNetModelSwin
-  ckpt_path: /users/ps1510/scratch/Programs/Sin3dFace/data/weights/SinSR_v2.pth
+  ckpt_path: /users/ps1510/scratch/Programs/SinSR/logs/model/SinSR_train_64_256/model_30000.pth # /users/ps1510/scratch/Programs/Sin3dFace/data/weights/SinSR_v2.pth
   teacher_ckpt_path: data/weights/resshift_realsrx4_s15_v1.pth
   params:
     image_size: 64
@@ -94,7 +94,7 @@ data:
   train:
     type: 3dSin
     params:
-      dir_path: /users/ps1510/scratch/Programs/3d-super-resolution-Face-reconstruction/contents/LYHM_32_128/hr_128
+      dir_path: /users/ps1510/scratch/Programs/3d-super-resolution-Face-reconstruction/contents/LYHM_64_256/hr_256
       dir_path_extra: ~
       im_exts: ['JPEG', 'png', 'jpg']
       io_backend:
@@ -159,7 +159,7 @@ train:
   log_freq: [1000, 500, 10] #[training loss, training images, val images]
   save_images: True  # save the images of tensorboard logging
   use_ema_val: True
-  train_size: 0.9 # val size = train_size - 0.2
+  train_size: 0.95 # val size = train_size - 0.2
 
 
 MICA:
@@ -225,4 +225,5 @@ MICA:
     write_summary: True
 
 # export OMP_NUM_THREADS=1
-# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/SinSR_vggface2_16_64_256_64.yaml --save_dir logs/image = np.array(imread(matching_images[0])) / 255.0
+# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/Sin3d_vggface2_16_64_256_64.yaml --save_dir logs/Sin3d_vggface2_16_64_256_64
+# python3 -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/Sin3d_vggface2_16_64_256_64.yaml --save_dir logs/Sin3d_vggface2_16_64_256_64
