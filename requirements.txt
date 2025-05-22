@@ -53,6 +53,7 @@ scikit-image
 scikit-learn
 scipy
 sympy
+tensorboardX
 threadpoolctl
 tifffile
 tqdm
@@ -60,5 +61,13 @@ trimesh
 uritemplate
 wcwidth
 yacs
+omegaconf
+lpips
+einops
+timm
+pyiqa
 
 # pip install "git+https://github.com/facebookresearch/pytorch3d.git"
+
+# pip install torch==1.13.0+cu116 torchvision==0.14.0+cu116 torchaudio==0.13.0 -f https://download.pytorch.org/whl/torch_stable.html
+# pip install pytorch3d==0.7.2 -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu116_pyt1130/download.html

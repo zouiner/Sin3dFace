@@ -1,4 +1,5 @@
 import os, sys, math, time, random, datetime, functools
+import re
 import lpips
 import numpy as np
 from pathlib import Path
@@ -182,8 +183,24 @@ class TrainerBase:
 
             # reset the seed
             self.setup_seed(seed=self.iters_start)
+
+            self.best_loss = self.load_best_loss(self.save_dir / 'best_model.txt') or float('inf')
         else:
             self.iters_start = 0
+            self.best_loss = None
+    
+    def load_best_loss(self, file_path):
+        try:
+            with open(file_path, 'r') as f:
+                line = f.readline()
+                match = re.search(r'loss:\s*([0-9.]+)', line)
+                if match:
+                    return float(match.group(1))
+                else:
+                    raise ValueError("Loss value not found in file.")
+        except FileNotFoundError:
+            print(f"[Warning] File not found: {file_path}")
+            return None
 
     def setup_optimizaton(self):
         self.opt_sr = torch.optim.AdamW(self.model.parameters(),
@@ -209,7 +226,8 @@ class TrainerBase:
         dataset = create_dataset_train(self.configs)
         train_size = int(self.configs.train.train_size * len(dataset))
         test_size = len(dataset) - train_size
-        train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+        generator = torch.Generator().manual_seed(42) # fix the train and test split
+        train_dataset, test_dataset = random_split(dataset, [train_size, test_size], generator=generator)
         datasets = {
             'train': train_dataset,
             'val': test_dataset
@@ -292,7 +310,7 @@ class TrainerBase:
         
         self.model.train()
         self.mica_model.train()
-        self.best_loss = None
+        
         num_iters_epoch = math.ceil(len(self.datasets['train']) / self.configs.train.batch[0])
         # for ii in range(self.iters_start, self.configs.train.iterations): max_steps
         for ii in range(self.iters_start, self.configs.MICA.train.max_steps):
@@ -1154,6 +1172,9 @@ class TrainerDistillDifIR(TrainerDifIR):
 
             batch = self.prepared_mica_batch(pred_image, temp_data)
             
+            b_t_loss = {}
+            self.alpha = self.configs.alpha # for balance loss
+            self.alpha = 0.001
 
             if self.configs.train.use_fp16:
                 with amp.autocast():
@@ -1162,18 +1183,24 @@ class TrainerDistillDifIR(TrainerDifIR):
 
                     loss_mica = losses_mica['pred_verts_shape_canonical_diff'] / num_grad_accumulate
 
-                scaler.scale(loss_sr).backward()
-                scaler.scale(loss_mica).backward()
+                # scaler.scale(loss_sr).backward()
+                # scaler.scale(loss_mica).backward()
+                total_loss = (1 - self.alpha) * loss_sr + self.alpha * loss_mica
+                scaler.scale(total_loss).backward()
             else:
                 input_mica, opdict, encoder_output, decoder_output = self.mica_model.training_MICA(batch)
                 losses_mica = self.mica_model.compute_losses(input_mica, encoder_output, decoder_output) # losses['pred_verts_shape_canonical_diff']
 
                 loss_mica = losses_mica['pred_verts_shape_canonical_diff'] / num_grad_accumulate
                 
-                loss_sr.backward()
-                loss_mica.backward()
+                # loss_sr.backward(retain_graph=True)
+                # loss_mica.backward()
+                total_loss = (1 - self.alpha) * loss_sr + self.alpha * loss_mica
+                total_loss.backward()
 
-            losses = losses_sr | losses_mica
+            b_t_loss['balance_total_loss'] = total_loss
+
+            losses = losses_sr | losses_mica | b_t_loss
 
             # make logging
             self.log_step_train(losses, tt*0 if not self.use_reflow else tt, micro_data, z_t, z0_pred, opdict = opdict, flag = last_batch)
@@ -1186,7 +1213,6 @@ class TrainerDistillDifIR(TrainerDifIR):
         else:
             self.opt_sr.step()
             self.opt_mica.step()
-            # self.scheduler.step()
 
         self.update_ema_model()
         

@@ -2,6 +2,9 @@ import argparse
 from omegaconf import OmegaConf
 from trainer import TrainerDistillDifIR as TrainerDistill, TrainerFaceRecon
 
+# import warnings
+# warnings.filterwarnings("ignore")
+
 
 def get_parser(**parser_kwargs):
     parser = argparse.ArgumentParser(**parser_kwargs)
@@ -31,6 +34,12 @@ def get_parser(**parser_kwargs):
             default=15,
             help="Hyper-parameters of diffusion steps",
             )
+    parser.add_argument(
+            "--alpha",
+            type=float,
+            default=0.5,
+            help="Hyper-parameters of balance the losses (loss = (1-alpha)*loss_sr + alpha*loss_mica)",
+            )
     args = parser.parse_args()
 
     return args
@@ -43,6 +52,7 @@ if __name__ == "__main__":
 
     #!!! fix for mica
     configs.MICA.output_dir = args.save_dir
+    configs.alpha = args.alpha
 
     # merge args to config
     for key in vars(args):

@@ -297,50 +297,62 @@ class Sampler(BaseSampler):
                 for im_path in tqdm(im_path_list, desc="Processing Images", unit="img"):
                     im_lq = util_image.imread(im_path, chn='rgb', dtype='float32')  # h x w x c
                     im_lq_tensor = util_image.img2tensor(im_lq).cuda()              # 1 x c x h x w
-                    if im_lq.shape[0] < 64:
+                    if im_lq.shape[0] <= 64:
                         im_lq_tensor = F.interpolate(im_lq_tensor, size=64, mode='bilinear', align_corners=False) # -> 64 x 64
-                    im_sr_tensor = _process_per_image(im_lq_tensor)
-                    
-                    # make it to be the same size with the real
-                    if im_lq.shape[0] < 64:
-                        im_sr_tensor = F.interpolate(im_sr_tensor, size=(int(im_lq.shape[0]), int(im_lq.shape[0])))
-                    
-                    im_sr = util_image.tensor2img(im_sr_tensor, rgb2bgr=True, min_max=(0.0, 1.0))
+                    for k in range(self.configs.sample):
+                        if self.configs.randseed and self.configs.sample > 1:
+                            self.setup_seed()
+                        elif self.configs.randseed:
+                            self.setup_seed(seed=self.seed + k)
+                        else:
+                            self.setup_seed(seed=self.seed)
+                        im_sr_tensor = _process_per_image(im_lq_tensor)
+                        
+                        # make it to be the same size with the real
+                        if im_lq.shape[0] <= 256:
+                            im_sr_tensor = F.interpolate(im_sr_tensor, size=(int(im_lq.shape[0]), int(im_lq.shape[0])))
+                        
+                        im_sr = util_image.tensor2img(im_sr_tensor, rgb2bgr=True, min_max=(0.0, 1.0))
 
-                    im_path_img = ex_path / 'sr_img' 
-                    im_path_img.mkdir(parents=True, exist_ok=True)
-                    name = f"{im_path.stem}.png"
-                    save_path = im_path_img / name
-                    util_image.imwrite(im_sr, save_path, chn='bgr', dtype_in='uint8')
-                    
+                        im_path_img = ex_path / 'sr_img' 
+                        im_path_img.mkdir(parents=True, exist_ok=True)
+                        
 
-                    # MICA
-                    
-                    image_mica = self.mica_model.tensor2tensor_img(im_sr_tensor, size = 224) * 255.0
-                    temp = self.mica_model.create_tensor_blob(image_mica)
-                    arcface = temp.detach().cuda().unsqueeze(0) # (3, 112, 112) -> (1,3,112,112)
-                    arcface = 2*arcface - 1 # (0,1) -> (-1,1)
-                    image = image_mica.detach().cuda().unsqueeze(0) / 255.0 # (3, 224, 224) -> (1,3,224,224)
-                    
-                    codedict = self.mica_model.encode(image, arcface)
-                    opdict = self.mica_model.decode(codedict)
-                    meshes = opdict['pred_canonical_shape_vertices']
-                    code = opdict['pred_shape_code']
-                    lmk = self.mica_model.flame.compute_landmarks(meshes)
+                        if self.configs.sample == 1:
+                            name = f"{im_path.stem}.png"
+                            save_path = im_path_img / name
+                        else:
+                            name = f"{im_path.stem}" + '_' + str(k).zfill(len(str(self.configs.sample))) + '.png'
+                            save_path = im_path_img / name
+                        util_image.imwrite(im_sr, save_path, chn='bgr', dtype_in='uint8')
 
-                    mesh = meshes[0].detach()
-                    landmark_51 = lmk[0, 17:]
-                    landmark_7 = landmark_51[[19, 22, 25, 28, 16, 31, 37]]
+                        # MICA
+                        
+                        image_mica = self.mica_model.tensor2tensor_img(im_sr_tensor, size = 224) * 255.0
+                        temp = self.mica_model.create_tensor_blob(image_mica)
+                        arcface = temp.detach().cuda().unsqueeze(0) # (3, 112, 112) -> (1,3,112,112)
+                        arcface = 2*arcface - 1 # (0,1) -> (-1,1)
+                        image = image_mica.detach().cuda().unsqueeze(0) / 255.0 # (3, 224, 224) -> (1,3,224,224)
+                        
+                        codedict = self.mica_model.encode(image, arcface)
+                        opdict = self.mica_model.decode(codedict)
+                        meshes = opdict['pred_canonical_shape_vertices']
+                        code = opdict['pred_shape_code']
+                        lmk = self.mica_model.flame.compute_landmarks(meshes)
 
-                    im_path_img = ex_path / '3d_obj' 
-                    save_path = im_path_img / name[:-4]
-                    save_path.mkdir(parents=True, exist_ok=True)
+                        mesh = meshes[0].detach()
+                        landmark_51 = lmk[0, 17:]
+                        landmark_7 = landmark_51[[19, 22, 25, 28, 16, 31, 37]]
 
-                    trimesh.Trimesh(vertices=mesh.cpu() * 1000.0, faces=faces, process=False).export(f'{save_path}/mesh.ply')  # save in millimeters
-                    trimesh.Trimesh(vertices=mesh.cpu() * 1000.0, faces=faces, process=False).export(f'{save_path}/mesh.obj')
-                    np.save(f'{save_path}/identity', code[0].cpu().detach().numpy())
-                    np.save(f'{save_path}/kpt7', landmark_7.cpu().detach().numpy() * 1000.0)
-                    np.save(f'{save_path}/kpt68', lmk.cpu().detach().numpy() * 1000.0)
+                        im_path_img = ex_path / '3d_obj' 
+                        save_path = im_path_img / name[:-4]
+                        save_path.mkdir(parents=True, exist_ok=True)
+
+                        trimesh.Trimesh(vertices=mesh.cpu() * 1000.0, faces=faces, process=False).export(f'{save_path}/mesh.ply')  # save in millimeters
+                        trimesh.Trimesh(vertices=mesh.cpu() * 1000.0, faces=faces, process=False).export(f'{save_path}/mesh.obj')
+                        np.save(f'{save_path}/identity', code[0].cpu().detach().numpy())
+                        np.save(f'{save_path}/kpt7', landmark_7.cpu().detach().numpy() * 1000.0)
+                        np.save(f'{save_path}/kpt68', lmk.cpu().detach().numpy() * 1000.0)
 
 
                     if return_tensor:
