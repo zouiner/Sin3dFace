@@ -26,6 +26,7 @@ env/
 contents/
 cuda_log/
 sr_pretrained_model/
+predict_quality_now_benchmark/experiments/
 
 # Slurm
 cuda_error_log/

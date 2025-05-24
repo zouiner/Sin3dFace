@@ -8,7 +8,7 @@ def main():
     dataset_dir = [
         '/users/ps1510/scratch/Programs/Sin3dFace/results/NoW_64_256_model1_s1_unkown_img/50000'
     ]
-    results_dir = 'experiment/' + 'test_results'
+    results_dir = 'experiments/' + 'test_results'
 
     # Hyperparameters
     batch_size = 16
