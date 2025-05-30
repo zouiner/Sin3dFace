@@ -227,4 +227,4 @@ MICA:
 # export OMP_NUM_THREADS=1
 # python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/Sin3d_vggface2_8_32_256_32.yaml --save_dir logs/Sin3d_vggface2_8_32_256_32
 # python3 -m torch.distributed.run --nproc_per_node=3 main_distill.py --cfg_path configs/Sin3d_vggface2_8_32_256_32.yaml --save_dir logs/SinSR_vggface2_8_32_256_32 --resume /users/ps1510/scratch/Programs/Sin3dFace/logs/SinSR_vggface2_8_32_256_32/2025-03-16-14-38/ckpts/model_69000.pth
-# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client main_distill.py --cfg_path configs/Sin3d_vggface2_8_32_256_32.yaml --save_dir logs/SinSR_vggface2_8_32_256_32 --resume /users/ps1510/scratch/Programs/Sin3dFace/logs/SinSR_vggface2_8_32_256_32/2025-03-16-14-38/ckpts/model_69000.pth
+# python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client main_distill.py --cfg_path configs/Sin3d_vggface2_8_32_256_32.yaml --save_dir logs/Sin3d_vggface2_8_32_256_32_no_sr_l_2 --alpha 0.5 --stepalpha 2

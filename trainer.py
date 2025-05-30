@@ -45,6 +45,9 @@ class TrainerBase:
         # setup seed
         self.setup_seed()
 
+        self.alpha = self.configs.alpha # for balance loss
+        self.stepalpha = self.configs.stepalpha
+
     def setup_dist(self):
         num_gpus = torch.cuda.device_count()
 
@@ -311,7 +314,7 @@ class TrainerBase:
         self.model.train()
         self.mica_model.train()
         
-        num_iters_epoch = math.ceil(len(self.datasets['train']) / self.configs.train.batch[0])
+        self.num_iters_epoch = math.ceil(len(self.datasets['train']) / self.configs.train.batch[0])
         # for ii in range(self.iters_start, self.configs.train.iterations): max_steps
         for ii in range(self.iters_start, self.configs.MICA.train.max_steps):
             self.current_iters = ii + 1
@@ -333,7 +336,7 @@ class TrainerBase:
             if (ii+1) % self.configs.train.save_freq == 0:
                 self.save_ckpt()
 
-            if (ii+1) % num_iters_epoch == 0 and self.sampler is not None:
+            if (ii+1) % self.num_iters_epoch == 0 and self.sampler is not None:
                 self.sampler.set_epoch(ii+1)
 
         # close the tensorboard
@@ -830,7 +833,7 @@ class TrainerDifIR(TrainerBase):
 
             indices = [int(self.base_diffusion.num_timesteps * x) for x in [0.25, 0.5, 0.75, 1]]
             batch_size = self.configs.train.batch[1]
-            num_iters_epoch = math.ceil(len(self.datasets[phase]) / batch_size)
+            self.num_iters_epoch = math.ceil(len(self.datasets[phase]) / batch_size)
             mean_psnr = mean_lpips = mean_musiq = mean_clipiqa = 0
             for ii, data in enumerate(self.dataloaders[phase]):
                 data = self.prepare_data(data, phase='val')
@@ -890,7 +893,7 @@ class TrainerDifIR(TrainerBase):
                     mean_lpips += self.lpips_loss(sample_decode['sample'].detach(), im_gt).sum().item()
                     
                 if (ii + 1) % self.configs.train.log_freq[2] == 0:
-                    self.logger.info(f'Validation: {ii+1:02d}/{num_iters_epoch:02d}...')
+                    self.logger.info(f'Validation: {ii+1:02d}/{self.num_iters_epoch:02d}...')
 
                     im_sr_all = rearrange(im_sr_all, 'b (k c) h w -> (b k) c h w', c=im_lq.shape[1])
                     im_xstart_all = rearrange(im_xstart_all, 'b (k c) h w -> (b k) c h w', c=im_lq.shape[1])
@@ -1173,8 +1176,6 @@ class TrainerDistillDifIR(TrainerDifIR):
             batch = self.prepared_mica_batch(pred_image, temp_data)
             
             b_t_loss = {}
-            self.alpha = self.configs.alpha # for balance loss
-            self.alpha = 0.001
 
             if self.configs.train.use_fp16:
                 with amp.autocast():
@@ -1185,6 +1186,11 @@ class TrainerDistillDifIR(TrainerDifIR):
 
                 # scaler.scale(loss_sr).backward()
                 # scaler.scale(loss_mica).backward()
+                if self.stepalpha == 1:
+                    self.alpha = self.get_alpha(self.current_iters, self.num_iters_epoch)
+                elif self.stepalpha == 2:
+                    self.alpha = self.get_alpha_sigmoid(self.current_iters, self.num_iters_epoch)
+
                 total_loss = (1 - self.alpha) * loss_sr + self.alpha * loss_mica
                 scaler.scale(total_loss).backward()
             else:
@@ -1195,6 +1201,11 @@ class TrainerDistillDifIR(TrainerDifIR):
                 
                 # loss_sr.backward(retain_graph=True)
                 # loss_mica.backward()
+                if self.stepalpha == 1:
+                    self.alpha = self.get_alpha(self.current_iters, self.num_iters_epoch)
+                elif self.stepalpha == 2:
+                    self.alpha = self.get_alpha_sigmoid(self.current_iters, self.num_iters_epoch)
+                
                 total_loss = (1 - self.alpha) * loss_sr + self.alpha * loss_mica
                 total_loss.backward()
 
@@ -1204,6 +1215,9 @@ class TrainerDistillDifIR(TrainerDifIR):
 
             # make logging
             self.log_step_train(losses, tt*0 if not self.use_reflow else tt, micro_data, z_t, z0_pred, opdict = opdict, flag = last_batch)
+        
+        if self.rank == 0:
+            self.writer.add_scalar('Alpha', self.alpha, self.current_iters)
 
         if self.configs.train.use_fp16:
             
@@ -1215,6 +1229,14 @@ class TrainerDistillDifIR(TrainerDifIR):
             self.opt_mica.step()
 
         self.update_ema_model()
+    
+    def get_alpha(self, epoch, total_epochs):
+        return epoch / total_epochs
+    
+    def get_alpha_sigmoid(self, epoch, total_epochs, steepness=10):
+        progress = epoch / total_epochs
+        return 1 / (1 + np.exp(-steepness * (progress - 0.5)))
+
         
         
     def log_step_train(self, loss, tt, batch, z_t, z0_pred, opdict, flag=False, phase='train'):
@@ -1252,6 +1274,7 @@ class TrainerDistillDifIR(TrainerDifIR):
                     log_str += f'{key}:{val[0].item():.2e} '
             
                 log_str += 'lr:{:.2e}'.format(self.opt_sr.param_groups[0]['lr'])
+                log_str += 'Alpha: {:.2e}'.format(self.alpha)
                 self.logger.info(log_str)
                 self.log_step[phase] += 1
                 
@@ -1328,7 +1351,7 @@ class TrainerDistillDifIR(TrainerDifIR):
 
             indices = [int(self.base_diffusion.num_timesteps * x) for x in [0.25, 0.5, 0.75, 1]]
             batch_size = self.configs.train.batch[1]
-            num_iters_epoch = math.ceil(len(self.datasets[phase]) / batch_size)
+            self.num_iters_epoch = math.ceil(len(self.datasets[phase]) / batch_size)
             mean_psnr = mean_lpips = mean_musiq = mean_clipiqa = 0
             for ii, data in enumerate(self.dataloaders[phase]):
                 # data = self.prepare_data(data, phase='val')
@@ -1373,7 +1396,7 @@ class TrainerDistillDifIR(TrainerDifIR):
                     mean_clipiqa += self.metric_dict["clipiqa"](torch.clip(results.detach() * 0.5 + 0.5, 0, 1)).sum().item()
                     mean_musiq += self.metric_dict["musiq"](torch.clip(results.detach() * 0.5 + 0.5, 0, 1)).sum().item()
                 if (ii + 1) % self.configs.train.log_freq[2] == 0:
-                    self.logger.info(f'Validation: {ii+1:02d}/{num_iters_epoch:02d}...')
+                    self.logger.info(f'Validation: {ii+1:02d}/{self.num_iters_epoch:02d}...')
 
                     save_path = self.image_dir / phase / f"{self.current_iters}"
                     save_path.mkdir(parents=True, exist_ok=True)

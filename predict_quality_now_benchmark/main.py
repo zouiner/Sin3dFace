@@ -6,21 +6,24 @@ from trainer import TrainerBase
 def main():
     # Paths
     dataset_dir = [
-        '/users/ps1510/scratch/Programs/Sin3dFace/results/NoW_64_256_model1_s1_unkown_img/50000'
+        '/users/ps1510/scratch/Programs/Sin3dFace/results/s15/NoW_8_32_model3_001_s15/84000',
+        '/users/ps1510/scratch/Programs/Sin3dFace/results/s15/NoW_16_64_model3_001_s15/56000',
+        '/users/ps1510/scratch/Programs/Sin3dFace/results/s15/NoW_32_128_model3_001_s15/58000',
+        '/users/ps1510/scratch/Programs/Sin3dFace/results/s15/NoW_64_256_model3_001_s15/150000'
     ]
-    results_dir = 'experiments/' + 'test_results'
+    results_dir = 'experiments/' + 'model3_s15'
 
     # Hyperparameters
     batch_size = 16
     val_size = 0.2  # 20% of the dataset for validation
-    num_epochs = 20
+    num_epochs = 100000
     learning_rate = 1e-4
     mesh_feat_dim = 300
     fusion_hidden_dim = 256
     thresholds = {
-        "median": 1.5,
-        "mean": 1.5,
-        "std": 1.5
+        "median": 1.12,
+        "mean": 1.41,
+        "std": 1.19
     }
     save_log = 5  # save every 5 epochs
     resume = None  # Or path to model checkpoint

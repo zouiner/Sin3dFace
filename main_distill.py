@@ -40,6 +40,12 @@ def get_parser(**parser_kwargs):
             default=0.5,
             help="Hyper-parameters of balance the losses (loss = (1-alpha)*loss_sr + alpha*loss_mica)",
             )
+    parser.add_argument(
+            "--stepalpha",
+            type=int,
+            default=0,
+            help="Hyper-parameters of balance the losses will decrease on SR loss and increse MICA loss (0: no change, 1: epoch/total, 2:Sigmoid decreas)",
+            )
     args = parser.parse_args()
 
     return args
@@ -53,6 +59,7 @@ if __name__ == "__main__":
     #!!! fix for mica
     configs.MICA.output_dir = args.save_dir
     configs.alpha = args.alpha
+    configs.stepalpha = args.stepalpha
 
     # merge args to config
     for key in vars(args):

@@ -300,7 +300,7 @@ class Sampler(BaseSampler):
                     if im_lq.shape[0] <= 64:
                         im_lq_tensor = F.interpolate(im_lq_tensor, size=64, mode='bilinear', align_corners=False) # -> 64 x 64
                     for k in range(self.configs.sample):
-                        if self.configs.randseed and self.configs.sample > 1:
+                        if self.configs.randseed and self.configs.sample == 1:
                             self.setup_seed()
                         elif self.configs.randseed:
                             self.setup_seed(seed=self.seed + k)
